@@ -11,36 +11,38 @@ import config from "../config/index";
 export const ProductForm = (props) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [imageURLs, setImageURLs] = useState([]);
-  const [productDetails, setProductDetails] = useState([{ color: "white", size: "M", quantity: 0 }]);
+  const [productDetails, setProductDetails] = useState([]);
   const [listCategorys, setListCategorys] = React.useState(props.listCategorys);
   const [listSubCategorys, setListSubCategorys] = React.useState([]);
   const [category, setCategory] = React.useState("");
   const [subCategory, setSubCategory] = React.useState("");
-  const [image, setImage] = React.useState(null);
+  const [image, setImage] = React.useState("");
   const [productName, setProductName] = React.useState('');
   const [oldPrice, setOldPrice] = React.useState(0);
   const [retailPrice, setRetailPrice] = React.useState(0);
   const [shortDescription, setShortDescription] = React.useState("");
   const [fullDescription, setFullDescription] = React.useState("");
-
+  var newImage=""
   const loadProductData = async () => {
     try {
       if (props.product.id) {
+        debugger
         await setProductName(props.product.name)
         await setOldPrice(props.product.oldPrice)
         await setRetailPrice(props.product.retailPrice)
-        await setCategory(props.product.productCategory.parentId)
-        await handleParentCategoryChange(props.product.productCategory.parentId)
+        await setCategory(props.product.productCategory && props.product.productCategory.parentId)
+        await handleParentCategoryChange(props.product.productCategory && props.product.productCategory.parentId)
         await setSubCategory(props.product.productCategory.id);
         await setShortDescription(props.product.description);
         await setFullDescription(props.product.fullDescription);
         const newProductDetails = [];
-        props.product.variation.map(item => (
+        props.product.variation && props.product.variation.map(item => (
           item.size.map((size) => (
             newProductDetails.push({ color: item.color, size: size.name, quantity: size.quantity })
           ))
         ));
         setProductDetails(newProductDetails);
+        console.log(productDetails)
         const newProductImages = [];
         props.product.productImage.map(item => (
           newProductImages.push(config.Image + item)
@@ -55,7 +57,11 @@ export const ProductForm = (props) => {
   };
 
   useEffect(() => {
-    loadProductData();
+    if (props.product.id) {
+      loadProductData();
+    }else{
+      setProductDetails([{ color: "white", size: "S", quantity: 0 }]);
+    }
   }, [props.product]);
 
   const handleFileChange = (e) => {
@@ -80,7 +86,7 @@ export const ProductForm = (props) => {
   };
 
   const handleNewDetail = () => {
-    const newProductDetail = { color: "white", size: "M", quantity: 0 };
+    const newProductDetail = { color: "white", size: "S", quantity: 0 };
     setProductDetails([...productDetails, newProductDetail]);
   };
 
@@ -96,19 +102,41 @@ export const ProductForm = (props) => {
           'Content-Type': 'multipart/form-data',
         },
       });
+      newImage= response.data.file.join(';');
       setImage(response.data.file.join(';'));
+      console.log(newImage);
 
     }
   };
 
-
+  const checkValid = () =>{
+    if(productName==""){
+      alert('Please input product name before save!');
+      return false
+    }
+    if(subCategory==""){
+      alert('Please choose category before save!');
+      return false
+    }
+    if(oldPrice < 0){
+      alert('Old price must >= 0 !');
+      return false
+    }
+    if(retailPrice <= 0){
+      alert('Retail price must > 0 !');
+      return false
+    }
+    if((newImage!= "" ? newImage : image) == ""){
+      alert('Please upload product picture before save !');
+      return false
+    }
+    return true
+  }
   const  handleNew = async () =>{
-    if (subCategory == '') {
-      alert('Chọn category trước khi lưu');
-    } else {
+    if (checkValid()) {
       var obj = {
         name: productName,
-        imageUrl: image,
+        imageUrl: newImage!= "" ? newImage : image,
         oldPrice: oldPrice,
         retailPrice: retailPrice,
         categoryId: subCategory,
@@ -121,7 +149,7 @@ export const ProductForm = (props) => {
         .then(res => {
           alert('Sucessfull');
           props.onHide(false)
-          props.reload(true)
+          props.setReload(!props.reload)
         })
         .catch(err => {
           alert(err.response.data.errors);
@@ -130,13 +158,11 @@ export const ProductForm = (props) => {
   }
 
   const  handleUpdate = async () =>{
-    if (subCategory == '') {
-      alert('Chọn category trước khi lưu');
-    } else {
+    if (checkValid()) {
       var obj = {
         id:props.product.id,
         name: productName,
-        imageUrl: image,
+        imageUrl: newImage!= "" ? newImage : image,
         oldPrice: oldPrice,
         retailPrice: retailPrice,
         categoryId: subCategory,
@@ -149,7 +175,7 @@ export const ProductForm = (props) => {
         .then(res => {
           alert('Sucessfull');
           props.onHide(false)
-          props.reload(true)
+          props.setReload(!props.reload)
         })
         .catch(err => {
           alert(err.response.data.errors);
@@ -364,6 +390,7 @@ const ProductDetail = ({ color, size, quantity, onColorChange, onSizeChange, onQ
         <Form.Group className="mb-2">
           <Form.Label>Size</Form.Label>
           <Form.Select id="size" defaultValue={size} onChange={(e) => onSizeChange(e.target.value)}>
+            <option value="S">S</option>
             <option value="M">M</option>
             <option value="L">L</option>
             <option value="XL">XL</option>
@@ -390,5 +417,6 @@ ProductForm.propTypes = {
   show: PropTypes.bool,
   product: PropTypes.object,
   listCategorys: PropTypes.array,
-  reload: PropTypes.func,
+  reload: PropTypes.bool,
+  setReload: PropTypes.func,
 };

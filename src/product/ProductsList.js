@@ -189,7 +189,8 @@ export const ProductsList = () => {
         onHide={() => handleClose()}
         product={product}
         listCategorys={listCategorys}
-        reload={setReload}
+        setReload={setReload}
+        reload={reload}
         />
       </Card>
     </>
